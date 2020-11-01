@@ -115,7 +115,7 @@ class VocabTable:
 
     @classmethod
     def from_corpus(cls, docpath, vocab_max, min_count,
-                    ndims=300, synset_potential=True):
+                    ndims=300, synset_potential=False):
         """
         Create a brand new VocabTable from a provided plaintext corpus.
         """

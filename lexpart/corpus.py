@@ -56,10 +56,21 @@ class RagBag:
         return RagBag.join(ragbags)
 
     @classmethod
-    def from_numpy(cls, numpy_path, vocab_numpy_path):
-        vocab = VocabTable.from_numpy(vocab_numpy_path)
+    def from_numpy(cls, numpy_path):
         data = numpy.load(numpy_path)
-        return cls(data['doc'], data['ends'], data['counts'], vocab)
+        vocab = VocabTable.from_export(data)
+        return cls(data['RagBag_doc'],
+                   data['RagBag_ends'],
+                   data['RagBag_counts'],
+                   vocab)
+
+    def save_numpy(self, numpy_path, projection=False):
+        numpy.savez_compressed(
+                numpy_path,
+                RagBag_doc=self.doc,
+                RagBag_ends=self.ends,
+                RagBag_counts=self.counts,
+                **self.vocab.export_numpy(projection))
 
     @classmethod
     def join(cls, ragbags):
@@ -77,15 +88,6 @@ class RagBag:
         ends = array_join_cumsum([rb.ends for rb in ragbags])
         counts = array_join([rb.counts for rb in ragbags])
         return RagBag(doc, ends, counts, vocab)
-
-    def save_numpy(self, numpy_path, vocab_numpy_path=None):
-        if vocab_numpy_path is not None:
-            self.vocab.save_numpy(vocab_numpy_path)
-        numpy.savez_compressed(
-                numpy_path,
-                doc=self.doc,
-                ends=self.ends,
-                counts=self.counts)
 
 
 def corpus_argparser(subparser=None):

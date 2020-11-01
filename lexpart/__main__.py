@@ -3,6 +3,7 @@ import argparse
 import vocab
 import corpus
 import embed
+import wordsim
 
 
 def main_argparser():
@@ -30,6 +31,12 @@ def main_argparser():
             help='Create a word embedding model.')
     embed_parser = embed.embed_argparser(embed_parser)
     embed_parser.set_defaults(func=embed.main)
+
+    wordsim_parser = subparsers.add_parser(
+            'wordsim',
+            help='Perform simple word similarity queries with an embedding.')
+    wordsim_parser = wordsim.wordsim_argparser(wordsim_parser)
+    wordsim_parser.set_defaults(func=wordsim.main)
 
     return parser
 

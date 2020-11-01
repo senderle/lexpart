@@ -8,9 +8,7 @@ from sparsehess import hessian_projection
 
 
 class Embedding:
-    def __init__(self, vocab):
-        self.vocab = vocab
-
+    def __init__(self, vocab_or_corpus):
         # Components of the embedding:
 
         # The sum of the partition function's polynomial terms.
@@ -34,6 +32,32 @@ class Embedding:
         # so that all corpora are equally weighted in the final sum.
         self.scale = 1.0
 
+        if isinstance(vocab_or_corpus, VocabTable):
+            self.vocab = vocab_or_corpus
+        else:
+            self.vocab = vocab_or_corpus.vocab
+            self.partition_update(vocab_or_corpus)
+
+    @classmethod
+    def from_numpy(cls, numpy_path):
+        data = numpy.load(numpy_path)
+        vocab = VocabTable.from_export(data)
+        emb = cls(vocab)
+        emb.partition = data['Embedding_partition']
+        emb.jacobian = data['Embedding_jacobian']
+        emb.p_hessian = data['Embedding_p_hessian']
+        emb.scale = data['Embedding_scale']
+        return emb
+
+    def save_numpy(self, numpy_path):
+        numpy.savez_compressed(
+                numpy_path,
+                Embedding_partition=self.partition,
+                Embedding_jacobian=self.jacobian,
+                Embedding_p_hessian=self.p_hessian,
+                Embedding_scale=self.scale,
+                **self.vocab.export_numpy(projection=True))
+
     @property
     def nwords(self):
         return self.vocab.nwords
@@ -43,6 +67,11 @@ class Embedding:
         return self.vocab.ndims
 
     def partition_update(self, corpus):
+        if self.vocab != corpus.vocab:
+            raise ValueError(
+                'Corpus VocabTable and Embedding VocabTable are incompatible.'
+            )
+
         if self.partition is None:
             self.partition = numpy.zeros(())
 
@@ -63,7 +92,6 @@ class Embedding:
                 self.vocab.projection,
                 self.scale)
 
-        # Insert stuff from around lines 703 in docembed.py
     def get_word_vectors(self):
         """
         Do the final calculations to convert the (randomly projected)
@@ -82,9 +110,6 @@ class Embedding:
         """
 
         # Normalize the hessian by the value of the partition function.
-        print(self.partition)
-        print(self.p_hessian[:5, :5])
-        print(self.jacobian[:5])
         normed_p_hessian = self.p_hessian / self.partition
 
         # Normalize the jacobian by the value of the partition function.
@@ -104,13 +129,13 @@ class Embedding:
         normed_p_jacobian_outer = (normed_jacobian.reshape(-1, 1) @
                                    normed_p_jacobian.reshape(1, -1))
 
-        # Finally, we subtract `normed_p_jacobian_outer` from
+        # Then we subtract `normed_p_jacobian_outer` from
         # `normed_p_hessian` and return the result.
-        return normed_p_hessian - normed_p_jacobian_outer
+        vecs = normed_p_hessian - normed_p_jacobian_outer
 
-
-def postprocess_word_vectors(vecs):
-    return vecs
+        # Cosine normalization
+        mag = (vecs * vecs).sum(axis=1) ** 0.5
+        return vecs / mag.reshape(-1, 1)
 
 
 def embed_argparser(subparser=None):
@@ -121,29 +146,32 @@ def embed_argparser(subparser=None):
         parser = subparser
 
     parser.add_argument(
-            'vocab_file',
-            help='The name of the vocabulary file.',
-            type=str)
-    parser.add_argument(
             'corpus_file',
             help='The name of the corpus file.',
+            type=str)
+    parser.add_argument(
+            'embedding_file',
+            help='The name of the embedding file.',
             type=str)
     return parser
 
 
 def main(args):
-    if args.vocab_file.endswith('.npz'):
-        vocab = VocabTable.from_numpy(args.vocab_file)
-    else:
-        vocab = VocabTable.from_csv(args.vocab_file)
+    corpus = RagBag.from_numpy(args.corpus_file)
 
-    corpus = RagBag.from_numpy(args.corpus_file, args.vocab_file)
-
-    embedding = Embedding(vocab)
-    embedding.partition_update(corpus)
+    embedding = Embedding(corpus)
+    embedding.save_numpy(args.embedding_file)
     vecs = embedding.get_word_vectors()
-    vecs = postprocess_word_vectors(vecs)
-    print(vecs.shape)
+
+    print(f'    Final embedding stats:')
+    rows, cols = vecs.shape
+    print(f'      {rows} {cols}-d vectors')
+    vecs_rav = vecs.ravel()
+    vecs_max = vecs_rav.max()
+    vecs_min = vecs_rav.min()
+    vecs_avg = vecs_rav.mean()
+    print(f'      embed max: {vecs_max:.4g}  '
+          f'min: {vecs_min:.4g}  avg: {vecs_avg:.4g}')
 
 
 if __name__ == '__main__':

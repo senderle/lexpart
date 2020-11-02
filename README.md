@@ -40,10 +40,15 @@ we can rewrite the above like so:
 
 Z = ∑<sub>i</sub> u<sub>1</sub><sup>N<sub>1,i</sub></sup> u<sub>2</sub><sup>N<sub>2,i</sub></sup> ... u<sub>k</sub><sup>N<sub>k,i</sub></sup> e<sup>−βE<sub>i</sub></sup>
 
-If we cheat a bit by treating the energy term as a constant for all terms, 
-we can treat the partition function as one huge polynomial. Each term in
-the polynomial represents a sentence as a bag of words, where the exponent
-is the word count. Since counts for sentences are sparse, and differentiation 
-is a linear operator, we can calculate values for the jacobian and hessian 
-very efficiently. The code that performs this calculation is in
-`sparsehess.py`.
+If we cheat a bit by treating the energy term (e<sup>−βE<sub>i</sub></sup>) 
+as a constant for all i, we can treat the partition function as one huge 
+polynomial. Each term in the polynomial represents a sentence as a bag of 
+words, where the exponent is the word count. Since counts for sentences are 
+sparse, and differentiation is a linear operator, we can calculate values 
+for the jacobian and hessian very efficiently. The code that performs this 
+calculation is in `sparsehess.py`.
+
+There are some interesting connections between this way of thinking about
+sentences and contexts in natural language and the way of thinking about
+data types described in Conor McBride's 
+"[The Derivative of a Regular Type is its Type of One-Hole Contexts](http://strictlypositive.org/diff.pdf)".

@@ -2,7 +2,7 @@ import argparse
 
 import numpy
 
-from .util import docs_tokens, random_window_gen
+from .util import docs_tokens, random_window_gen, temp_test_corpus
 from .vocab import VocabTable
 from .fastcount import fast_count_batch
 
@@ -142,7 +142,11 @@ def main(args):
     else:
         vocab = VocabTable.from_csv(args.vocab_file)
 
-    megabag = RagBag.from_corpus(args.docs, vocab)
+    if args.docs == '-':
+        with temp_test_corpus() as docs:
+            megabag = RagBag.from_corpus(docs, vocab)
+    else:
+        megabag = RagBag.from_corpus(args.docs, vocab)
     megabag.save_numpy(args.corpus_file)
 
 

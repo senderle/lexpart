@@ -7,7 +7,7 @@ import numpy
 from pyhash import city_64
 from nltk.corpus import wordnet
 
-from .util import docs_tokens
+from .util import docs_tokens, temp_test_corpus
 
 
 def stable_random_matrix(words, dimension, _hashfunc=city_64(0)):
@@ -237,7 +237,15 @@ def vocab_argparser(subparser=None):
 
 
 def main(args):
-    vocab = VocabTable.from_corpus(args.docs, args.max_vocab, args.min_count)
+    if args.docs == '-':
+        # Use built-in enwiki8 data.
+        with temp_test_corpus() as docs:
+            vocab = VocabTable.from_corpus(
+                    docs, args.max_vocab, args.min_count)
+    else:
+        vocab = VocabTable.from_corpus(
+                args.docs, args.max_vocab, args.min_count)
+
     if args.csv:
         vocab.save_csv(args.vocab_file)
     else:

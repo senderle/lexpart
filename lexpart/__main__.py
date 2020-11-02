@@ -1,5 +1,7 @@
 import argparse
 
+import pkg_resources
+
 from . import vocab
 from . import corpus
 from . import embed

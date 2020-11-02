@@ -1,6 +1,10 @@
 import re
+import tarfile
+import tempfile
 from pathlib import Path
+from contextlib import contextmanager
 
+import pkg_resources
 import numpy
 
 
@@ -28,3 +32,22 @@ def random_window_gen(mean, std, stop, block_size=1000):
             yield from block
             yield stop
             return
+
+
+@contextmanager
+def temp_test_corpus():
+    en8path = pkg_resources.resource_filename(
+            'lexpart',
+            'data/test/enwiki8.tar.bz2')
+    try:
+        tmpdir = tempfile.TemporaryDirectory()
+        data = tarfile.open(en8path, 'r:bz2')
+        data.extractall(tmpdir.name)
+        docs = Path(tmpdir.name) / Path('enwiki8')
+        for f in docs.iterdir():
+            if f.stem.startswith('.'):
+                f.unlink()
+        yield docs
+    finally:
+        data.close()
+        tmpdir.cleanup()

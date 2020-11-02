@@ -45,10 +45,10 @@ as a constant for all i, we can treat the partition function as one huge
 polynomial. Each term in the polynomial represents a sentence as a bag of 
 words, where the exponent is the word count. Since counts for sentences are 
 sparse, and differentiation is a linear operator, we can calculate values 
-for the jacobian and hessian very efficiently. The code that performs this 
+for the Jacobian and Hessian very efficiently. The code that performs this 
 calculation is in `sparsehess.py`.
 
 There are some interesting connections between this way of thinking about
 sentences and contexts in natural language and the way of thinking about
-data types described in Conor McBride's 
-"[The Derivative of a Regular Type is its Type of One-Hole Contexts](http://strictlypositive.org/diff.pdf)".
+data types described in Conor McBride's "[The Derivative of a Regular 
+Type is its Type of One-Hole Contexts](http://strictlypositive.org/diff.pdf)."

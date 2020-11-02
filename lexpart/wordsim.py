@@ -9,13 +9,14 @@ from .embed import Embedding
 def wordsim_argparser(subparser=None):
     if subparser is None:
         parser = argparse.ArgumentParser(
-                description='Create a word embedding model from a corpus.')
+                description='Load a word embedding and perform a word '
+                            'similarity query.')
     else:
         parser = subparser
 
     parser.add_argument(
             'embedding_file',
-            help='The name of the embedding file.',
+            help='The name of the embedding file to load.',
             type=str)
     parser.add_argument(
             'query',

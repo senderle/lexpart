@@ -247,12 +247,12 @@ def embed_argparser(subparser=None):
         parser = subparser
 
     parser.add_argument(
-            'corpus_file',
-            help='The name of the corpus file.',
+            'embedding_file',
+            help='The name of the embedding file to be saved.',
             type=str)
     parser.add_argument(
-            'embedding_file',
-            help='The name of the embedding file.',
+            'corpus_file',
+            help='The name of the input corpus file.',
             type=str)
     return parser
 

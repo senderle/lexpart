@@ -122,16 +122,16 @@ def corpus_argparser(subparser=None):
         parser = subparser
 
     parser.add_argument(
+            'corpus_file',
+            help="The name of the corpus file to be saved.")
+    parser.add_argument(
             'vocab_file',
-            help="The name of the vocabulary file.",
+            help="The name of the input vocabulary file.",
             type=str)
     parser.add_argument(
             'docs',
-            help="A path to a folder containing plain text files.",
+            help="The name of an input folder containing plain text files.",
             type=str)
-    parser.add_argument(
-            'corpus_file',
-            help="The name of the corpus file.")
 
     return parser
 

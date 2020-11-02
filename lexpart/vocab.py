@@ -206,12 +206,12 @@ def vocab_argparser(subparser=None):
         parser = subparser
 
     parser.add_argument(
-            'docs',
-            help="A path to a folder containing plain text files.",
+            'vocab_file',
+            help="The name of the vocabulary file to be saved.",
             type=str)
     parser.add_argument(
-            'vocab_file',
-            help="The name of the vocabulary file.",
+            'docs',
+            help="The name of an input folder containing plain text files.",
             type=str)
     parser.add_argument(
             '--max-vocab',
@@ -225,6 +225,14 @@ def vocab_argparser(subparser=None):
                  "the corpus to be included in the vocabulary file.",
             type=int,
             default=5)
+    parser.add_argument(
+            '--synset-potential',
+            help="Generate semantic potential values for each word in the "
+                 "vocabulary based on the number of synsets the word has "
+                 "in wordnet. (Experimental; the default is to use 1 for "
+                 "all words in the vocabulary.)",
+            action="store_true",
+            default=False)
     parser.add_argument(
             '--csv',
             help="Save the vocabulary as a CSV file. Default is false, "

@@ -32,13 +32,13 @@ commands with the path to a folder containing plain text files.
 The model described in the paper is based on the grand canonical partition
 function for multiple species in its standard form: 
 
-Z = ∑<sub>i</sub> e<sup>β(µ<sub>1</sub>N<sub>1,i</sub> + µ<sub>2</sub>N<sub>2,i</sub> + ... + µ<sub>k</sub>N<sub>k,i</sub> − Ei)</sup>
+Z = ∑<sub>i</sub> e<sup>β(µ<sub>1</sub>N<sub>1,i</sub> + µ<sub>2</sub>N<sub>2,i</sub> + ... + µ<sub>k</sub>N<sub>k,i</sub> − E<sub>i</sub>)</sup>
 
 For computational purposes, however, it's convenient to represent the
 partition function in another form. Substituting u[k] for e<sup>βμ[k]</sup>, 
 we can rewrite the above like so:
 
-Z = ∑<sub>i</sub> u<sub>1</sub><sup>N<sub>1,i</sub></sup> u<sub>2</sub><sup>N<sub>2,i</sub></sup> ... u<sub>k</sub><sup>N<sub>k,i</sub> e<sup>−βE[i]</sup>
+Z = ∑<sub>i</sub> u<sub>1</sub><sup>N<sub>1,i</sub></sup> u<sub>2</sub><sup>N<sub>2,i</sub></sup> ... u<sub>k</sub><sup>N<sub>k,i</sub> e<sup>−βE<sub>i</sub></sup>
 
 If we cheat a bit by treating the energy term as a constant for all terms, 
 we can treat the partition function as one huge polynomial. Each term in

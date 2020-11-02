@@ -3,7 +3,7 @@ import re
 
 import numpy
 
-from embed import Embedding
+from .embed import Embedding
 
 
 def wordsim_argparser(subparser=None):

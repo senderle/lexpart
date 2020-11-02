@@ -4,7 +4,7 @@ from collections import Counter
 import numba
 import numpy
 
-from util import random_window_gen
+from .util import random_window_gen
 
 
 @numba.jit(nopython=True, nogil=True)

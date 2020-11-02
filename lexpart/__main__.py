@@ -1,9 +1,9 @@
 import argparse
 
-import vocab
-import corpus
-import embed
-import wordsim
+from . import vocab
+from . import corpus
+from . import embed
+from . import wordsim
 
 
 def main_argparser():

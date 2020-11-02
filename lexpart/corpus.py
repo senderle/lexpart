@@ -2,9 +2,9 @@ import argparse
 
 import numpy
 
-from util import docs_tokens, random_window_gen
-from vocab import VocabTable
-from fastcount import fast_count_batch
+from .util import docs_tokens, random_window_gen
+from .vocab import VocabTable
+from .fastcount import fast_count_batch
 
 
 def array_join(arrs):
@@ -32,6 +32,13 @@ def array_join_cumsum(arrs):
 
 
 class RagBag:
+    """
+    A ragged array of bags of words. Words are represented as indices into
+    a VocabTable. `doc` is a sequence of the word indices contained by
+    all the bags; `ends` describes the endpoints of each of the bags;
+    `counts` contains the counts for each word in a given bag; `vocab`
+    contains the VocabTable to be used for word attribute lookup.
+    """
     def __init__(self, doc, ends, counts, vocab):
         self.doc = doc
         self.ends = ends
@@ -41,42 +48,59 @@ class RagBag:
 
     @classmethod
     def from_corpus_doc(cls, corpus_doc, vocab, window=50, window_sigma=0.5):
+        """
+        Generate a RagBag from a single text document.
+        """
         encoded_doc = vocab[corpus_doc]
         raw_bag_ends = numpy.fromiter(
             random_window_gen(window, window_sigma, len(encoded_doc)),
             dtype=numpy.int64
         )
         doc, ends, counts = fast_count_batch(encoded_doc, raw_bag_ends)
+
+        # TODO: IMPLEMENT WORD FREQUENCY SUBSAMPLING HERE.
         return cls(doc, ends, counts, vocab)
 
     @classmethod
     def from_corpus(cls, corpus, vocab):
+        """
+        Generate a RagBag from a collection of text documents in a single
+        folder by creating separate RagBags for each document, and then
+        joining them together.
+        """
         ragbags = [RagBag.from_corpus_doc(d, vocab)
                    for d in docs_tokens(corpus)]
-        return RagBag.join(ragbags)
+        return RagBag.join_all(ragbags)
 
     @classmethod
     def from_numpy(cls, numpy_path):
+        """
+        Load a RagBag from a saved numpy archive.
+        """
         data = numpy.load(numpy_path)
         vocab = VocabTable.from_export(data)
-        return cls(data['RagBag_doc'],
-                   data['RagBag_ends'],
-                   data['RagBag_counts'],
+        return cls(data['RagBag__doc'],
+                   data['RagBag__ends'],
+                   data['RagBag__counts'],
                    vocab)
 
     def save_numpy(self, numpy_path, projection=False):
+        """
+        Save a RagBag to a numpy archive.
+        """
         numpy.savez_compressed(
                 numpy_path,
-                RagBag_doc=self.doc,
-                RagBag_ends=self.ends,
-                RagBag_counts=self.counts,
+                RagBag__doc=self.doc,
+                RagBag__ends=self.ends,
+                RagBag__counts=self.counts,
                 **self.vocab.export_numpy(projection))
 
     @classmethod
-    def join(cls, ragbags):
-        # Take multiple ragbags, check that they are all
-        # based on the same VocabTable, throw an error if not, and
-        # join them into one big megabag if so.
+    def join_all(cls, ragbags):
+        """
+        Join together multiple RagBags based on the same VocabTable.
+        If the RagBags are not based on the same table, throw a ValueError.
+        """
         vocab = ragbags[0].vocab
         for rb in ragbags[1:]:
             if rb.vocab != vocab:

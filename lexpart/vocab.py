@@ -7,7 +7,7 @@ import numpy
 from pyhash import city_64
 from nltk.corpus import wordnet
 
-from util import docs_tokens
+from .util import docs_tokens
 
 
 def stable_random_matrix(words, dimension, _hashfunc=city_64(0)):
@@ -49,12 +49,20 @@ class VocabIndex:
         if self is other:
             return True
         else:
-            return ((self.vocab == other.vocab) and
+            return ((self.vocab == other.vocab).all() and
                     (self.index == other.index))
 
 
 # TODO: Add a mechanism for selecting a potential function.
 class VocabTable:
+    """
+    A structure for storing and working with a fixed vocabulary drawn
+    from a given corpus, along with count statistics, potential terms,
+    and a dimension-reducing projection.
+
+    This allows words to be represented as indices into dense arrays of
+    attributes.
+    """
     def __init__(self, word, count, potential, ndims=300):
         self.word = word
         self.count = count
@@ -89,18 +97,18 @@ class VocabTable:
         """
         Recreate a VocabTable from an exported dictionary of numpy arrays.
         """
-        word = data['VocabTable_word']
-        count = data['VocabTable_count']
-        potential = data['VocabTable_potential']
-        if 'VocabTable_projection' in data:
+        word = data['VocabTable__word']
+        count = data['VocabTable__count']
+        potential = data['VocabTable__potential']
+        if 'VocabTable__projection' in data:
             # Assume that the projection can't be recreaed using
             # stable random projection.
-            projection = data['VocabTable_projection']
+            projection = data['VocabTable__projection']
             instance = cls(word, count, potential)
             instance.projection = projection
             return instance
-        elif 'VocabTable_ndims' in data:
-            ndims = data['VocabTable_ndims'].item()
+        elif 'VocabTable__ndims' in data:
+            ndims = data['VocabTable__ndims'].item()
             return cls(word, count, potential, ndims)
         else:
             return cls(word, count, potential)
@@ -147,16 +155,19 @@ class VocabTable:
         of the time, the projeciton can be recreated using the stable random
         projection scheme, but in situations where it can't, we can set
         `projeciton=True` to preserve it as well.
+
+        This is distinct from `save_numpy` in VocabTable so that RagBag and
+        Embedding archives can easily include embedded tables.
         """
         exp = {
-            'VocabTable_word': self.word,
-            'VocabTable_count': self.count,
-            'VocabTable_potential': self.potential,
+            'VocabTable__word': self.word,
+            'VocabTable__count': self.count,
+            'VocabTable__potential': self.potential,
         }
         if projection:
-            exp['VocabTable_projection'] = self.projection
+            exp['VocabTable__projection'] = self.projection
         else:
-            exp['VocabTable_ndims'] = self.ndims
+            exp['VocabTable__ndims'] = self.ndims
         return exp
 
     def save_csv(self, csv_path):
@@ -171,6 +182,11 @@ class VocabTable:
         return self.index[ix]
 
     def __eq__(self, other):
+        """
+        A test for equality is provided because it will sometiems be
+        necessary to verify that two different client structures
+        (Embedding and RagBag) are based on identical VocabTables.
+        """
         # Take a shortcut; identity is sufficient for equality.
         if self is other:
             return True

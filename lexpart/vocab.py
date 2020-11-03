@@ -5,9 +5,24 @@ from pathlib import Path
 
 import numpy
 from pyhash import city_64
-from nltk.corpus import wordnet
 
 from .util import docs_tokens, temp_test_corpus
+
+import nltk
+
+
+def get_wordnet():
+    wordnet = None
+    try:
+        from nltk.corpus import wordnet
+        return wordnet
+    except ImportError:
+        nltk.download('wordnet')
+        try:
+            from nltk.corpus import wordnet
+            return wordnet
+        except ImportError:
+            return None
 
 
 def stable_random_matrix(words, dimension, _hashfunc=city_64(0)):
@@ -134,6 +149,11 @@ class VocabTable:
 
         word, count = map(numpy.array, zip(*ct.most_common(vocab_max)))
         if synset_potential:
+            wordnet = get_wordnet()
+            if wordnet is None:
+                print("The synset_potential option requires the nltk "
+                      "wordnet corpus, but it could not be downloaded."
+                      "Falling back to the default.")
             synset_lens = numpy.array([len(wordnet.synsets(w)) for w in word])
             potential = numpy.log10(synset_lens + 1) * 0.3 + 1
         else:

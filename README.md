@@ -3,6 +3,8 @@
 Companion code for "Toward a Thermodynamics of Meaning," 
 CHR 2020 (https://arxiv.org/abs/2009.11963)
 
+[![DOI](https://zenodo.org/badge/307819729.svg)](https://zenodo.org/badge/latestdoi/307819729)
+
 This contains a simple reference implementation of a lingusitic partition
 function as described in the paper, with some limited documentation.
 

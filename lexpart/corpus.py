@@ -47,30 +47,40 @@ class RagBag:
         self.potentials = self.vocab.potential[self.doc]
 
     @classmethod
-    def from_corpus_doc(cls, corpus_doc, vocab, window=50, window_sigma=0.5):
+    def from_text(cls, text, vocab, window=50, window_sigma=0.5,
+                  downsample=1.0):
         """
-        Generate a RagBag from a single text document.
+        Generate a RagBag from a single text document (represented as a list
+        of token strings).
         """
-        encoded_doc = vocab[corpus_doc]
+        encoded_doc = vocab[text]
         raw_bag_ends = numpy.fromiter(
             random_window_gen(window, window_sigma, len(encoded_doc)),
             dtype=numpy.int64
         )
         doc, ends, counts = fast_count_batch(encoded_doc, raw_bag_ends)
 
-        # TODO: IMPLEMENT WORD FREQUENCY SUBSAMPLING HERE.
-        return cls(doc, ends, counts, vocab)
+        ragbag = cls(doc, ends, counts, vocab)
+        if downsample < 1.0:
+            ragbag.downsample_common_words(downsample)
+
+        return ragbag
 
     @classmethod
-    def from_corpus(cls, corpus, vocab):
+    def from_corpus(cls, corpus, vocab, window=50, window_sigma=0.5,
+                    downsample=1.0):
         """
-        Generate a RagBag from a collection of text documents in a single
-        folder by creating separate RagBags for each document, and then
-        joining them together.
+        Generate a RagBag from a collection of text documents by creating
+        separate RagBags for each document, and then joining them together.
         """
-        ragbags = [RagBag.from_corpus_doc(d, vocab)
+        ragbags = [RagBag.from_text(d, vocab, window, window_sigma)
                    for d in docs_tokens(corpus)]
-        return RagBag.join_all(ragbags)
+        megabag = RagBag.join_all(ragbags)
+
+        # Faster to downsample all at once.
+        if downsample < 1.0:
+            megabag.downsample_common_words(downsample)
+        return megabag
 
     @classmethod
     def from_numpy(cls, numpy_path):
@@ -113,6 +123,34 @@ class RagBag:
         counts = array_join([rb.counts for rb in ragbags])
         return RagBag(doc, ends, counts, vocab)
 
+    def downsample_common_words(self, threshold):
+        # Identify words to downsample.
+        downsample = self.vocab.frequency > threshold
+
+        # Identify doc indices to downsample, repeating count times.
+        downsample_doc_index = numpy.array([
+            i for i in range(len(self.doc))
+            for c in range(int(self.counts[i]))
+            if downsample[self.doc[i]]
+        ])
+
+        # Fix downsample probability for each instance.
+        downsample_probability = numpy.array([
+            1 - (threshold / self.vocab.frequency[self.doc[i]]) ** 0.5
+            for i in downsample_doc_index
+        ])
+
+        # Randomly select instances to downsample.
+        rand = numpy.random.random(len(downsample_probability))
+        to_downsample = downsample_doc_index[rand < downsample_probability]
+
+        # Reduce count by one for each selected instance.
+        for i in to_downsample:
+            self.counts[i] -= 1
+
+        # Avoid div by zero in log-based calculations.
+        self.counts[self.counts == 0] = 1e-10
+
 
 def corpus_argparser(subparser=None):
     if subparser is None:
@@ -132,6 +170,21 @@ def corpus_argparser(subparser=None):
             'docs',
             help="The name of an input folder containing plain text files.",
             type=str)
+    parser.add_argument(
+            '--downsample-threshold',
+            help="A threshold for downsampling common words. Words that "
+                 "appear in the corpus with a probability greater than this "
+                 "value will be randomly downsampled with probability "
+                 "dp = 1 - (t / p) ** 0.5.",
+            type=float,
+            default=1.0)
+    parser.add_argument(
+            '--window_size',
+            help="The window size to use for creating \"sentences\". (This "
+                 "simple model creates them by randomly slicing input text "
+                 "into chunks roughly this many words long.)",
+            type=int,
+            default=50)
 
     return parser
 
@@ -144,9 +197,19 @@ def main(args):
 
     if args.docs == '-':
         with temp_test_corpus() as docs:
-            megabag = RagBag.from_corpus(docs, vocab)
+            megabag = RagBag.from_corpus(
+                docs,
+                vocab,
+                window=args.window_size,
+                downsample=args.downsample_threshold
+            )
     else:
-        megabag = RagBag.from_corpus(args.docs, vocab)
+        megabag = RagBag.from_corpus(
+            args.docs,
+            vocab,
+            window=args.window_size,
+            downsample=args.downsample_threshold
+        )
     megabag.save_numpy(args.corpus_file)
 
 

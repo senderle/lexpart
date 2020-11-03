@@ -53,7 +53,6 @@ class VocabIndex:
                     (self.index == other.index))
 
 
-# TODO: Add a mechanism for selecting a potential function.
 class VocabTable:
     """
     A structure for storing and working with a fixed vocabulary drawn
@@ -67,6 +66,7 @@ class VocabTable:
         self.word = word
         self.count = count
         self.potential = potential
+        self.frequency = count / count.sum()
         self.index = VocabIndex(self.word)
         self.projection = None
         self.create_projection(ndims)

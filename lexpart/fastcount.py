@@ -125,7 +125,7 @@ def fast_count_batch(indices, ends):
     # Counts will be stored in a new ragged array
     dense_ends = numpy.zeros_like(ends)
     dense_indices = numpy.zeros_like(indices)
-    dense_counts = numpy.zeros_like(indices)
+    dense_counts = numpy.zeros_like(indices, dtype=numpy.float64)
 
     # Preallocate the up and down arrays to be used by the counting
     # routine. This saves a ton of wastful memory allocation.

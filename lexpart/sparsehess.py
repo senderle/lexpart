@@ -102,16 +102,24 @@ def hessian_multi(f_out,
         hessian_out[term_ix] = hess
 
 
-@numba.jit(  # numba.int64(numba.float64[:],
-             #             numba.float64[:],
-             #             numba.float64[:, :],
-             #             numba.int64[:],
-             #             numba.int64[:],
-             #             numba.int64[:],
-             #             numba.float64[:],
-             #             numba.float64[:, :],
-             #             numba.float64),
-           nopython=True,
+# This describes the datatype of `hessian_projection` for ahead-of-time
+# compilation. But just-in-time is more flexible and accommodates numpy
+# zero-dim arrays more easily. This is included for the sake of
+# documentation, but it is not used.
+_hessian_projection_dtype = numba.int64(
+        # Zero-dim arrays were faster than ordinary python scalars in tests.
+        numba.types.Array(numba.float64, 0, 'A'),
+        numba.float64[:],
+        numba.float64[:, :],
+        numba.int64[:],
+        numba.int64[:],
+        numba.int64[:],
+        numba.float64[:],
+        numba.float64[:, :],
+        numba.float64)
+
+
+@numba.jit(nopython=True,
            nogil=True)
 def hessian_projection(
         fout,
@@ -129,7 +137,6 @@ def hessian_projection(
     reduction. It's also, from the point of view of calculus, a matrix
     of random directional derivatives of the polynomial.
     """
-
     embed_size = proj_vecs.shape[1]
     err_count = 0
     start = 0
@@ -191,6 +198,95 @@ def hessian_projection(
         start = end
 
     return err_count
+
+
+# An experimental feature that corrects for the fact that the hessian of
+# the partition function with respect to potential (mu) is not quite the
+# same as the hessian of the partition function with respect to the
+# simplified potential (u, where u = e^(beta * mu)). This gets the former
+# from the latter. But empirically, there seems to be no difference in
+# performance. Probably the following is true: this amounts to a difference
+# in the degree of the terms of the derivative, which doesn't have much
+# effect in the immediate neighborhood of the point of evaluation.
+@numba.jit(nopython=True,
+           nogil=True)
+def elastic_hessian_projection(
+        fout,
+        jacobian,
+        rand_hess,
+        ends,
+        indices,
+        counts,
+        potentials,
+        proj_vecs,
+        scale_factor):
+    """
+    Calculate a random projection of the hessian for multiple polynomial
+    terms. This is a simple and fairly effective form of dimension
+    reduction. It's also, from the point of view of calculus, a matrix
+    of random directional derivatives of the polynomial.
+    """
+    embed_size = proj_vecs.shape[1]
+    err_count = 0
+    start = 0
+    n_docs = ends.shape[0]
+    for doc_ix in range(n_docs):
+        end = ends[doc_ix]
+        hess_size = end - start
+
+        # Calclulate the value of the polynomial term in log space.
+        poly_pow = 0
+        for i in range(hess_size):
+            poly_pow += log(potentials[start + i]) * counts[start + i]
+
+        # Briefly drop out of log space to save the scalar output
+        # of the polynomial term.
+        fout += exp(poly_pow) * scale_factor
+
+        for i in range(hess_size):
+            w_i = indices[start + i]
+            counts_i = counts[start + i]
+
+            # Calculate the value of the jacobian by dividing out the
+            # value of the given variable (named `potentials_i` here) and
+            # multiplying the term by the exponent (named `counts_i` here).
+            jac_i = (poly_pow +
+                     log(counts_i))
+
+            # Briefly drop out of log space to update jacobian
+            jacobian[w_i] += exp(jac_i) * scale_factor
+
+            for j in range(hess_size):
+                # Caclulate a hessian term by repeating the process used to
+                # calculate the jacobian.
+                hess_i_j = exp(jac_i +
+                               log(counts[start + j]))
+
+                # If we are on a diagonal, we need a nonlinear correction
+                # to get the second partial derivative instead of the mixed
+                # partial derivative. (Second derivative of x^3 is 6x, but
+                # without this correction we would get 9x.)
+                if i == j:
+                    hess_i_j *= (counts_i - 1) / counts_i
+
+                # Drop unexpected NANs.
+                if isnan(hess_i_j) or isinf(hess_i_j):
+                    err_count += 1
+                    continue
+
+                # Perform the random projection.
+                w_j = indices[start + j]
+                for k in range(embed_size):
+                    rand_hess[w_i, k] += (hess_i_j *
+                                          proj_vecs[w_j, k] *
+                                          scale_factor)
+
+        start = end
+
+    return err_count
+
+
+
 
 
 def _hessian_test_wrapper_multi(PS, XS):
@@ -257,7 +353,7 @@ def _estimated_hessian(ps, xs, delta=1e-4):
 
 def _test_hessian_speed():
     setup = """
-from sparsehess import (  # This module!
+from __main__ import (
     hessian,
     log_hessian,
     _hessian_test_wrapper_multi

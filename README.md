@@ -2,7 +2,7 @@
 
 Companion code for "Toward a Thermodynamics of Meaning," CHR 2020  
 Official: http://ceur-ws.org/Vol-2723/short40.pdf  
-ArXiv: https://arxiv.org/abs/2009.11963
+arXiv: https://arxiv.org/abs/2009.11963
 
 [![DOI](https://zenodo.org/badge/307819729.svg)](https://zenodo.org/badge/latestdoi/307819729)
 
